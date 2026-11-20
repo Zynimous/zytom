@@ -19,7 +19,7 @@ import os
 from typing import Any
 
 from fastapi import Body, Depends, FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
 from . import alerts as alerts_mod
 from . import calendar_view
@@ -231,6 +231,12 @@ def create_app(store: Store | None = None, clock=None, scheduler: bool = True,
     @app.post("/calendar/sync", dependencies=guard)
     def calendar_sync():
         return {"results": sync_sources(store, sec.tz, sec.now)}
+
+    @app.get("/glossary", response_class=PlainTextResponse)
+    def glossary(section: str | None = None):
+        from .server import glossary_text
+
+        return glossary_text(section)
 
     @app.get("/health")
     def health():

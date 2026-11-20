@@ -52,6 +52,20 @@ def _expected_errors(fn):
     return wrapper
 
 
+def glossary_text(section: str | None = None) -> str:
+    from importlib.resources import files
+
+    text = files("zytom").joinpath("glossary.md").read_text(encoding="utf-8")
+    if not section:
+        return text
+    parts = text.split("\n## ")
+    hits = [p for p in parts[1:] if section.lower() in p.split("\n", 1)[0].lower()]
+    if not hits:
+        heads = [p.split("\n", 1)[0] for p in parts[1:]]
+        raise ValueError(f"no section {section!r}; sections: {heads}")
+    return "\n\n".join("## " + h for h in hits)
+
+
 def _clock():
     fixed = os.environ.get("ZYTOM_NOW")
     return (lambda: parse_dt(fixed)) if fixed else now_utc
@@ -128,6 +142,17 @@ def build_server(store: Store | None = None, clock=None) -> MCPServer:
         """寫入事件（只能追加）。started/done 會同步 Item 狀態（習慣與週期規則除外）；done 帶 actual_h 時自動比對預估。
         對話中的狀態訊號（好累、狀態很好）用 said，只記 log 不改 Item。"""
         return sec.log_event(kind, item_id, data)
+
+    @mcp.tool(annotations=READ)
+    def log_query(
+        item_id: str | None = None,
+        kinds: Annotated[list[str] | None, Field(description="事件種類，例如 [\"done\",\"deferred\"]")] = None,
+        since: Annotated[str | None, Field(description="ISO 時間；例如一週前")] = None,
+        limit: Annotated[int, Field(ge=1, le=500)] = 100,
+    ) -> dict:
+        """查詢事件 log（最新的在後）。每週反思與 Observation 的 evidence 用。"""
+        logs = store.logs(item_id, kinds, parse_dt(since, sec.tz) if since else None)
+        return {"count": len(logs), "logs": [l.model_dump(mode="json") for l in logs[-limit:]]}
 
     # ------------------------------------------------------------ engine
     @mcp.tool(annotations=READ)
@@ -253,6 +278,21 @@ def build_server(store: Store | None = None, clock=None) -> MCPServer:
             store.set_pref("calendar_sources", srcs)
         return {"results": [{"name": name, "ok": True,
                              **import_ics(store, fetch(url), name, sec.tz, sec.now, include_types)}]}
+
+    # ---------------------------------------------------------- glossary
+    @mcp.resource("zytom://glossary", name="glossary", title="zytom 資料與數值說明",
+                  description="欄位定義、opt/med/pes、source、壓力值、tension 分級、變更格式等", mime_type="text/markdown")
+    def glossary_resource() -> str:
+        return glossary_text()
+
+    @mcp.tool(annotations=READ)
+    def glossary(
+        section: Annotated[str | None, Field(description=(
+            "只取某一節，例如 Value、三情境數值、Item、可用時間、signals、壓力值、tension、變更、recommend、log、"
+            "Observation、Alert、calendar_view；省略則回傳全文"))] = None,
+    ) -> dict:
+        """資料與數值說明（與 resource zytom://glossary 相同）：各欄位的定義與計算方式。"""
+        return {"text": glossary_text(section)}
 
     # ---------------------------------------------------------- calendar
     @mcp.tool(annotations=READ)

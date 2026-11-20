@@ -57,6 +57,8 @@ uv run zytom api                   # FastAPI 服務：REST、/calendar、/ws/ale
 | `notes_get` / `notes_propose` | 讀 Notes；Agent 只能提案，使用者以 `zytom notes accept` 確認 | 否 / 提案 |
 | `prefs` | 睡眠等保留時段、每日雜項時數、時區、每日回顧時間 | 是 |
 | `calendar_view` | 秘書日曆：day / week / month / list，四個圖層 | 否 |
+| `glossary` | 欄位與數值說明（同 resource `zytom://glossary`），可只取一節 | 否 |
+| `log_query` | 查詢事件 log（反思與 evidence 用） | 否 |
 
 變更（`simulate` / `apply`）格式：
 
@@ -129,9 +131,14 @@ uv run zytom gcal import --calendar primary --save        # 匯入未來 60 天�
 
 預估內容沿用 `~`，網頁上滑鼠停留可看工時來源與依據。
 
-## 不在此 repo 的部分
+## Agent 怎麼知道怎麼用
 
-依 Plan.md「提示詞與 skill」：Agent 的系統提示詞、解析與反思用的提示、skill 另成獨立模組；MCP server 只提供工具與資料。
+分兩層，對應 Plan.md「MCP server 只提供工具與資料，提示詞與 skill 另成模組」：
+
+1. **資料說明**（server 內，`src/zytom/glossary.md`）：只描述欄位定義與計算方式，不含行為指示。透過 resource `zytom://glossary`、工具 `glossary(section=…)`、`GET /glossary` 取得，任何 MCP 客戶端都能用。
+2. **秘書 skill**（`.claude/skills/zytom-secretary/SKILL.md`）：每輪流程、對話怎麼寫成 Item、怎麼讀數值、依 tension 等級怎麼回應、減壓確認流程、什麼時候才能問問題、記錄進度、Notes、每週反思、回應風格。在此專案目錄開 Claude Code 會自動載入；換模型或改語氣只改這份，不動工具。
+
+要在別的目錄使用 skill，把資料夾複製到 `~/.claude/skills/`。
 
 ## 測試
 

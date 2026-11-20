@@ -315,6 +315,12 @@ def test_mcp_tools_in_process(sec):
             r = await c.call_tool("notes_propose", {"name": "main.md", "content": "hi\n"})
             assert "+hi" in data(r)["diff"]
             assert sec.store.note("main.md") is None  # 只是提案，沒有寫入
+            res = await c.list_resources()
+            assert any(str(r.uri) == "zytom://glossary" for r in res.resources)
+            g = await c.read_resource("zytom://glossary")
+            assert "strong_share" in g.contents[0].text
+            r = await c.call_tool("glossary", {"section": "tension"})
+            assert "warn" in data(r)["text"] and "## Item" not in data(r)["text"]
 
     asyncio.run(run())
 
