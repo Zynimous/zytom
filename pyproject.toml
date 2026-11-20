@@ -1,0 +1,32 @@
+[project]
+name = "zytom"
+version = "0.1.0"
+description = "個人 AI 秘書：Item 資料層、數值引擎與 MCP server"
+readme = "README.md"
+authors = [
+    { name = "Zynimous", email = "dev@zynimous.dev" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.165.0",
+    "icalendar>=7.3.2",
+    "mcp>=1.2",
+    "python-dateutil>=4.0.0",
+    "tzdata>=2026.6",
+    "websockets>=17.4",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.2.0",
+]
+
+[project.scripts]
+zytom = "zytom.cli:main"
+zytom-mcp = "zytom.server:main"
+zytom-api = "zytom.api:main"
